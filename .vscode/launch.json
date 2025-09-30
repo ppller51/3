@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug MyExecutable",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/MyExecutable",  // 需要修改为实际的可执行文件路径
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ],
+      "miDebuggerPath": "/usr/bin/gdb",
+      "preLaunchTask": "build",
+      "stopAtEntry": false,
+      "serverLaunchTimeout": 10000,
+      "filterStderr": true,
+      "filterStdout": false,
+      "visualizerFile": "${workspaceFolder}/.vscode/gdb/visualizers"
+    }
+  ]
+}
