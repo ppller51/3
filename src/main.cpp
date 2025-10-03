@@ -10,6 +10,7 @@
 struct SamplePoint {
     double t;         // 秒
     cv::Point2d px;   // 物理坐标（像素)
+};
 
 // ------------------ 轨迹模型残差（Ceres） ------------------
 struct TrajModelCost {
