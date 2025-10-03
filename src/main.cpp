@@ -93,7 +93,7 @@ int main(int, char**) {
     }
 
     const double fps = 60.0;          
-    const int maxFrames = 100;        // 最多处理前 180 帧
+    const int maxFrames = 100;        
     std::vector<SamplePoint> samples;
 
     cv::Mat frame, firstFrame;
