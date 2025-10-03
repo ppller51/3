@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <cstddef>
+#include <chrono>  // 添加时间测量头文件
 
 // ------------------ 数据结构 ------------------
 struct SamplePoint {
@@ -79,72 +80,11 @@ cv::Point2d detectBlueProjectile(const cv::Mat& frame) {
     return {cx, cy};
 }
 
-// ------------------ 生成对比图、叠加图的函数 ------------------
-void generateComparisonImage(int frameH, int frameW, const std::vector<SamplePoint>& samples, 
-                             const double* params, const cv::Mat& firstFrame) {
-    // Helper function to convert physical coordinates to image coordinates
-    auto toImg = [&](double x, double y) -> cv::Point {
-        int ix = static_cast<int>(std::round(x));
-        int iy = frameH - static_cast<int>(std::round(y)); // 翻回图像坐标
-        return {ix, iy};
-    };
-
-    // 左：原始点；右：拟合+点
-    cv::Mat left(frameH, frameW, CV_8UC3, cv::Scalar(0, 0, 0));
-    cv::Mat right(frameH, frameW, CV_8UC3, cv::Scalar(0, 0, 0));
-
-    // 绘制原始点
-    for (const auto& s : samples) {
-        cv::circle(left,  toImg(s.px.x, s.px.y), 3, cv::Scalar(0, 0, 255), -1, cv::LINE_AA);
-        cv::circle(right, toImg(s.px.x, s.px.y), 3, cv::Scalar(0, 0, 255), -1, cv::LINE_AA);
-    }
-
-    // 绘制拟合曲线
-    {
-        cv::Point prev = toImg(params[0], params[1]);
-        const double t_end = samples.back().t + 0.5;
-        for (double t = 0.0; t <= t_end; t += 0.01) {
-            const double expkt = std::exp(-params[3] * t);
-            const double x = params[0] + (params[0] / params[3]) * (1.0 - expkt);
-            const double y = params[1] + ((params[2] + params[2] / params[3]) / params[3]) * (1.0 - expkt)
-                           - (params[2] / params[3]) * t;
-            cv::Point curr = toImg(x, y);
-            cv::line(right, prev, curr, cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
-            prev = curr;
-        }
-    }
-
-    // 拼接左右图为对比图
-    cv::Mat compare(frameH, frameW * 2, CV_8UC3);
-    left.copyTo(compare(cv::Rect(0, 0, frameW, frameH)));
-    right.copyTo(compare(cv::Rect(frameW, 0, frameW, frameH)));
-
-    // 保存对比图
-    cv::imwrite("../trajectory_compare.png", compare);
-
-    // 叠加拟合曲线到首帧
-    if (!firstFrame.empty()) {
-        cv::Mat overlay = firstFrame.clone();
-        for (const auto& s : samples) {
-            cv::circle(overlay, toImg(s.px.x, s.px.y), 3, cv::Scalar(0, 0, 255), -1, cv::LINE_AA);
-        }
-        cv::Point prev = toImg(params[0], params[1]);
-        const double t_end = samples.back().t + 0.5;
-        for (double t = 0.0; t <= t_end; t += 0.01) {
-            const double expkt = std::exp(-params[3] * t);
-            const double x = params[0] + (params[0] / params[3]) * (1.0 - expkt);
-            const double y = params[1] + ((params[2] + params[2] / params[3]) / params[3]) * (1.0 - expkt)
-                           - (params[2] / params[3]) * t;
-            cv::Point curr = toImg(x, y);
-            cv::line(overlay, prev, curr, cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
-            prev = curr;
-        }
-        cv::imwrite("../trajectory_overlay.png", overlay);
-    }
-}
-
 // ------------------ 主函数 ------------------
 int main(int, char**) {
+    // ====== 1) 记录程序开始时间 ======
+    auto programStartTime = std::chrono::high_resolution_clock::now(); // 记录程序开始时间
+
     // ====== 1) 读取视频并检测点 ======
     cv::VideoCapture cap("/home/pl/1/video.mp4");
     if (!cap.isOpened()) {
@@ -153,7 +93,7 @@ int main(int, char**) {
     }
 
     const double fps = 60.0;          
-    const int maxFrames = 180;        // 最多处理前 180 帧
+    const int maxFrames = 100;        // 最多处理前 180 帧
     std::vector<SamplePoint> samples;
 
     cv::Mat frame, firstFrame;
@@ -216,8 +156,10 @@ int main(int, char**) {
               << " g: "  << params[2]
               << " k: "  << params[3] << std::endl;
 
-    // ====== 3) 生成对比可视化 ======
-    generateComparisonImage(frameH, frameW, samples, params, firstFrame);
+    // ====== 3) 计算程序总耗时 ======
+    auto programEndTime = std::chrono::high_resolution_clock::now(); // 记录程序结束时间
+    auto programTotalDuration = std::chrono::duration_cast<std::chrono::milliseconds>(programEndTime - programStartTime); // 计算总耗时
+    std::cout << "程序总耗时: " << programTotalDuration.count() << " 毫秒" << std::endl;
 
     return 0;
 }
